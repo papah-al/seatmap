@@ -281,12 +281,7 @@
     let selectedSeatIds = new Set();
     
     // Load data tersimpan
-let savedSeats = {};
-
-loadFromFirebase().then(data => {
-  savedSeats = data || {};
-  renderMap();
-});
+let savedSeats = JSON.parse(localStorage.getItem('denah_kantor_data')) || {};
 
 
     // Konfigurasi Cluster (Sama)
@@ -459,7 +454,7 @@ loadFromFirebase().then(data => {
         });
 
         // Simpan ke LocalStorage otomatis (opsional, tapi bagus untuk UX)
-        
+        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
 
         // Render ulang (cara paling aman untuk update tampilan banyak elemen)
         renderMap();
@@ -482,7 +477,7 @@ loadFromFirebase().then(data => {
     }
 
     function manualSave() {
-        saveToFirebase(savedSeats);
+        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
         alert("✅ Data has been permanently saved!");
     }
 
@@ -495,39 +490,6 @@ loadFromFirebase().then(data => {
 </script>
 
     
-<script type="module">
-  // Import Firebase (Browser CDN)
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  // Firebase config (punya kamu)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDVBlgFfuOAQrjQROiYeIxMfQS2CxCDbl8",
-    authDomain: "seatmap-e7fa6.firebaseapp.com",
-    projectId: "seatmap-e7fa6",
-    storageBucket: "seatmap-e7fa6.firebasestorage.app",
-    messagingSenderId: "966503686198",
-    appId: "1:966503686198:web:09af53a21a20e0ab3f3897"
-  };
-
-  // Init Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // ===== FUNGSI GLOBAL =====
-
-  // SAVE ke Firestore
-  window.saveToFirebase = async function(data) {
-    await setDoc(doc(db, "seatmap", "floor9"), data);
-    alert("✅ Data tersimpan di Firebase");
-  };
-
-  // LOAD dari Firestore
-  window.loadFromFirebase = async function() {
-    const snap = await getDoc(doc(db, "seatmap", "floor9"));
-    return snap.exists() ? snap.data() : {};
-  };
-</script>
 
 
     
