@@ -397,7 +397,7 @@
         const count = selectedSeatIds.size;
         if (count > 0) {
             selectionBar.style.display = 'flex';
-            selectionCountSpan.innerText = `${count} Kursi Dipilih`;
+            selectionCountSpan.innerText = `${count} Selected`;
         } else {
             selectionBar.style.display = 'none';
         }
@@ -411,7 +411,7 @@
 
     function openModal() {
         if (selectedSeatIds.size === 0) {
-            alert("Pilih kursi terlebih dahulu!");
+            alert("Select first!");
             return;
         }
         
@@ -442,7 +442,7 @@
         if (type === 'Custom') {
             newLabel = labelInput.value.trim();
             if (!newLabel) {
-                alert("Masukkan label teks!");
+                alert("Input text label!");
                 return;
             }
         }
