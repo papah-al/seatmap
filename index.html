@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denah Lantai Interaktif (Multi-Select)</title>
+    <style>
+        :root {
+            --idle-color: #4ade80; /* Hijau */
+            --cbn-color: #60a5fa;  /* Biru */
+            --crm-color: #c084fc;  /* Ungu */
+            --temu-color: #fb923c; /* Orange */
+            --indofood-color: #f87171; /* Merah */
+            --selected-border: #facc15; /* Kuning Terang */
+            --default-bg: #fff;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            padding-bottom: 80px; /* Space for sticky footer */
+        }
+
+        h1 { margin-bottom: 10px; text-align: center; }
+        
+        .controls {
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        .color-box { width: 15px; height: 15px; border: 1px solid #000; }
+
+        /* Container Denah Utama */
+        .map-container {
+            position: relative;
+            width: 1680px;
+            height: 1080px;
+            background-color: #fff;
+            border: 3px solid #000;
+            clip-path: polygon(5% 0%, 85% 0%, 100% 40%, 70% 100%, 5% 90%); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            transform-origin: top center;
+            transform: scale(0.9); 
+        }
+
+        /* Group Kursi */
+        .seat-group {
+            position: absolute;
+            display: grid;
+            gap: 2px;
+            padding: 2px;
+            background: transparent;
+        }
+
+        /* Kursi Individual */
+        .seat {
+            width: 32px;
+            height: 20px;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--idle-color);
+            transition: transform 0.1s, background-color 0.2s, border-color 0.1s;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        /* CLASS KHUSUS JIKA DIPILIH (MULTI SELECT) */
+        .seat.selected {
+            border: 3px solid var(--selected-border);
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transform: scale(1.1);
+            z-index: 20;
+            filter: brightness(1.05);
+        }
+
+        /* Warna berdasarkan Label */
+        .seat[data-label="Idle"] { background-color: var(--idle-color); }
+        .seat[data-label*="CBN"] { background-color: var(--cbn-color); }
+        .seat[data-label*="CRM"] { background-color: var(--crm-color); }
+        .seat[data-label*="TEMU"] { background-color: var(--temu-color); }
+        .seat[data-label*="Indofood"] { background-color: var(--indofood-color); }
+        .seat[data-label=""] { background-color: #eee; }
+
+        .structure {
+            position: absolute;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background-color: #f3f4f6;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* --- FLOATING ACTION BAR (Untuk Multi Select) --- */
+        #selectionBar {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        #selectionBar span { font-weight: bold; }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-edit { background: #4ade80; color: #000; }
+        .btn-edit:hover { background: #22c55e; }
+        .btn-clear { background: #ef4444; color: white; }
+        .btn-clear:hover { background: #dc2626; }
+
+        /* Modal Edit */
+        #editModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border: 2px solid #333;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 3000;
+            border-radius: 8px;
+            width: 320px;
+        }
+        #modalOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 2999;
+        }
+
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Tombol umum */
+        button { cursor: pointer; }
+        .btn-idle { background: var(--idle-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-cbn { background: var(--cbn-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-crm { background: var(--crm-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-temu { background: var(--temu-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-indofood { background: var(--indofood-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-custom { background: #eee; border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Mapping Seat 9th FL MTen</h1>
+
+    <div class="controls">
+        <div class="legend-item"><div class="color-box" style="background:var(--idle-color)"></div> Idle</div>
+        <div class="legend-item"><div class="color-box" style="background:var(--cbn-color)"></div> CBN</div>
+        <div class="legend-item"><div class="color-box" style="background:var(--crm-color)"></div> CRM</div>
+        <div class="legend-item"><div class="color-box" style="background:var(--temu-color)"></div> TEMU</div>
+        <div class="legend-item"><div class="color-box" style="background:var(--indofood-color)"></div> Indofood</div>
+        
+        <div style="border-left: 2px solid #ccc; padding-left: 15px; margin-left: 10px; display:flex; gap:10px;">
+            <button onclick="manualSave()" style="background:#4ade80; color:black; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
+                💾 Save
+            </button>
+            <button onclick="resetData()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
+                Reset Data
+            </button>
+        </div>
+        <div>Total Seats: <span id="totalSeats">0</span></div>
+    </div>
+    
+    <p style="margin-top:-10px; font-size: 0.9em; color: #666;">
+        Tip: Klik kursi untuk memilih (bisa pilih banyak). Klik tombol "Edit Selected" di bawah untuk mengubah label.
+    </p>
+
+    <div class="map-container" id="map">
+        <!-- Structure Elements -->
+        <div class="structure" style="top: 38%; left: 28%; width: 80px; height: 220px;">
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+            </div>
+        </div>
+        <div class="structure" style="top: 38%; left: 48%; width: 80px; height: 220px;">
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+            </div>
+        </div>
+        <div class="structure" style="top: 45%; left: 58%; width: 80px; height: 60px;">Lift Barang</div>
+        <div class="structure" style="top: 40%; left: 70%; width: 60px; height: 180px;">Server Room</div>
+        <div class="structure" style="top: 40%; left: 90%; width: 40px; height: 80px;">Coaching</div>
+    </div>
+
+    <!-- Floating Selection Bar -->
+    <div id="selectionBar">
+        <span id="selectionCount">0 Seat(s) Selected</span>
+        <button class="btn-action btn-edit" onclick="openModal()">✏️ Edit Selected</button>
+        <button class="btn-action btn-clear" onclick="clearSelection()">✖ Cancel</button>
+    </div>
+
+    <!-- Modal Edit -->
+    <div id="modalOverlay"></div>
+    <div id="editModal">
+        <h3 style="margin-top:0;">Edit Label</h3>
+        <p style="font-size: 0.9em; color:#555;">Mengubah <span id="modalCount">0</span> kursi terpilih.</p>
+        
+        <input type="text" id="customLabel" placeholder="Ketik label custom..." style="width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box;">
+        
+        <div class="modal-buttons">
+            <button class="btn-idle" onclick="applyUpdate('Idle')">Set Idle</button>
+            <button class="btn-cbn" onclick="applyUpdate('CBN')">Set CBN</button>
+            <button class="btn-crm" onclick="applyUpdate('CRM')">Set CRM</button>
+            <button class="btn-temu" onclick="applyUpdate('TEMU')">Set TEMU</button>
+            <button class="btn-indofood" onclick="applyUpdate('Indofood')">Set Indofood</button>
+            <button class="btn-custom" onclick="applyUpdate('Custom')">Use Text Input</button>
+        </div>
+        <div style="margin-top: 15px; text-align: right;">
+            <button onclick="closeModal()" style="background:transparent; border:none; text-decoration:underline;">Batal</button>
+        </div>
+    </div>
+
+<script>
+    const map = document.getElementById('map');
+    const selectionBar = document.getElementById('selectionBar');
+    const selectionCountSpan = document.getElementById('selectionCount');
+    
+    // Set untuk menyimpan ID kursi yang sedang dipilih
+    let selectedSeatIds = new Set();
+    
+    // Load data tersimpan
+    let savedSeats = JSON.parse(localStorage.getItem('denah_kantor_data')) || {};
+
+    // Konfigurasi Cluster (Sama)
+    const seatGroups = [
+        { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
+        { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
+        { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
+        { x: 24, y: 15, rows: 2, cols: 4, label: "Idle" },
+        { x: 10, y: 23, rows: 2, cols: 5, label: "Idle" },
+        { x: 24, y: 23, rows: 2, cols: 4, label: "Idle" },
+        { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
+        { x: 24, y: 31, rows: 2, cols: 4, label: "Idle" },
+        { x: 46, y: 8, rows: 8, cols: 1, label: "Idle" },
+        { x: 55, y: 8, rows: 2, cols: 5, label: "Idle" },
+        { x: 69, y: 8, rows: 2, cols: 5, label: "Idle" },
+        { x: 55, y: 16, rows: 2, cols: 5, label: "Idle" },
+        { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
+        { x: 55, y: 24, rows: 2, cols: 5, label: "Idle" },
+        { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
+        { x: 74, y: 31, rows: 1, cols: 10, label: "Idle" },
+        { x: 82, y: 40, rows: 10, cols: 2, label: "Idle" },
+        { x: 6, y: 45, rows: 2, cols: 4, label: "Idle" },
+        { x: 8, y: 53, rows: 2, cols: 4, label: "Idle" },
+        { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
+        { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
+        { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
+        { x: 18, y: 72, rows: 2, cols: 2, label: "Idle" },
+        { x: 26, y: 72, rows: 2, cols: 6, label: "Idle" },
+        { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
+        { x: 26, y: 80, rows: 2, cols: 6, label: "Idle" },
+        { x: 13, y: 89, rows: 1, cols: 12, label: "Idle" }, 
+        { x: 48, y: 72, rows: 2, cols: 4, label: "Idle" },
+        { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
+        { x: 48, y: 80, rows: 2, cols: 5, label: "Idle" },
+        { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
+        { x: 49, y: 89, rows: 1, cols: 12, label: "Idle" },
+        { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
+    ];
+
+    let seatCounter = 0;
+
+    function renderMap() {
+        seatCounter = 0;
+        
+        // Hapus grup kursi lama (jangan hapus .structure)
+        const oldGroups = document.querySelectorAll('.seat-group');
+        oldGroups.forEach(el => el.remove());
+
+        seatGroups.forEach((group, groupIndex) => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'seat-group';
+            groupDiv.style.left = group.x + '%';
+            groupDiv.style.top = group.y + '%';
+            groupDiv.style.gridTemplateColumns = `repeat(${group.cols}, 1fr)`;
+
+            for (let i = 0; i < group.rows * group.cols; i++) {
+                seatCounter++;
+                const seatId = `S-${groupIndex}-${i}`;
+                
+                // Ambil label dari savedSeats atau default
+                let currentLabel = savedSeats[seatId] || group.label;
+
+                const seat = document.createElement('div');
+                seat.className = 'seat';
+                seat.dataset.id = seatId;
+                seat.dataset.label = currentLabel;
+                seat.innerText = currentLabel;
+                seat.title = `ID: ${seatId}`;
+                
+                // Cek apakah kursi ini sedang dipilih (berguna saat render ulang setelah save)
+                if (selectedSeatIds.has(seatId)) {
+                    seat.classList.add('selected');
+                }
+                
+                // Event Click Handling
+                seat.onclick = function(e) {
+                    // Mencegah double firing jika perlu
+                    e.stopPropagation();
+                    toggleSelection(this);
+                };
+
+                groupDiv.appendChild(seat);
+            }
+            map.appendChild(groupDiv);
+        });
+
+        document.getElementById('totalSeats').innerText = seatCounter;
+    }
+
+    // --- SELECTION LOGIC ---
+    function toggleSelection(seatElement) {
+        const id = seatElement.dataset.id;
+
+        if (selectedSeatIds.has(id)) {
+            // Unselect
+            selectedSeatIds.delete(id);
+            seatElement.classList.remove('selected');
+        } else {
+            // Select
+            selectedSeatIds.add(id);
+            seatElement.classList.add('selected');
+        }
+
+        updateSelectionUI();
+    }
+
+    function clearSelection() {
+        selectedSeatIds.clear();
+        document.querySelectorAll('.seat.selected').forEach(el => el.classList.remove('selected'));
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+        const count = selectedSeatIds.size;
+        if (count > 0) {
+            selectionBar.style.display = 'flex';
+            selectionCountSpan.innerText = `${count} Kursi Dipilih`;
+        } else {
+            selectionBar.style.display = 'none';
+        }
+    }
+
+    // --- MODAL & EDIT LOGIC ---
+    const modal = document.getElementById('editModal');
+    const overlay = document.getElementById('modalOverlay');
+    const labelInput = document.getElementById('customLabel');
+    const modalCount = document.getElementById('modalCount');
+
+    function openModal() {
+        if (selectedSeatIds.size === 0) {
+            alert("Pilih kursi terlebih dahulu!");
+            return;
+        }
+        
+        // Reset input text
+        labelInput.value = "";
+        
+        // Tampilkan jumlah yang akan diedit
+        modalCount.innerText = selectedSeatIds.size;
+
+        // Jika hanya 1 yang dipilih, isi input dengan label saat ini agar mudah diedit
+        if (selectedSeatIds.size === 1) {
+            const firstId = Array.from(selectedSeatIds)[0];
+            const seatEl = document.querySelector(`.seat[data-id="${firstId}"]`);
+            if (seatEl) labelInput.value = seatEl.dataset.label;
+        }
+
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+
+    function applyUpdate(type) {
+        let newLabel = type;
+        if (type === 'Custom') {
+            newLabel = labelInput.value.trim();
+            if (!newLabel) {
+                alert("Masukkan label teks!");
+                return;
+            }
+        }
+
+        // Terapkan ke semua ID yang dipilih
+        selectedSeatIds.forEach(id => {
+            savedSeats[id] = newLabel;
+        });
+
+        // Simpan ke LocalStorage otomatis (opsional, tapi bagus untuk UX)
+        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
+
+        // Render ulang (cara paling aman untuk update tampilan banyak elemen)
+        renderMap();
+        
+        // Clear selection setelah edit selesai
+        clearSelection();
+        closeModal();
+    }
+    
+    // --- GLOBAL CONTROLS ---
+
+    function resetData() {
+        if(confirm("Apakah Anda yakin ingin mereset semua perubahan ke default?")) {
+            localStorage.removeItem('denah_kantor_data');
+            savedSeats = {};
+            selectedSeatIds.clear();
+            renderMap();
+            updateSelectionUI();
+        }
+    }
+
+    function manualSave() {
+        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
+        alert("✅ Data berhasil disimpan secara permanen!");
+    }
+
+    // Tutup modal jika klik overlay
+    overlay.onclick = closeModal;
+
+    // Init App
+    renderMap();
+
+</script>
+
+</body>
+</html>
