@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>9th FL MTen - Firebase Edition</title>
+    <title>9th FL MTen - Manual Save Edition</title>
     <style>
         :root {
             --idle-color: #4ade80; /* Hijau */
@@ -12,6 +12,7 @@
             --temu-color: #fb923c; /* Orange */
             --indofood-color: #f87171; /* Merah */
             --selected-border: #facc15; /* Kuning Terang */
+            --unsaved-border: #ef4444; /* Merah untuk indikator belum save */
             --default-bg: #fff;
             --border-color: #333;
         }
@@ -23,7 +24,7 @@
             flex-direction: column;
             align-items: center;
             padding: 20px;
-            padding-bottom: 80px; /* Space for sticky footer */
+            padding-bottom: 80px; 
         }
 
         h1 { margin-bottom: 10px; text-align: center; }
@@ -104,6 +105,17 @@
             filter: brightness(1.05);
         }
 
+        /* Indikator Visual untuk Data Belum Disimpan */
+        .seat.unsaved::after {
+            content: "•";
+            color: red;
+            font-size: 20px;
+            position: absolute;
+            top: -10px;
+            right: -2px;
+            line-height: 1;
+        }
+
         /* Warna berdasarkan Label */
         .seat[data-label="Idle"] { background-color: var(--idle-color); }
         .seat[data-label*="CBN"] { background-color: var(--cbn-color); }
@@ -124,9 +136,9 @@
             font-size: 12px;
         }
 
-        /* --- FLOATING ACTION BAR (Untuk Multi Select) --- */
+        /* --- FLOATING ACTION BAR --- */
         #selectionBar {
-            display: none; /* Hidden by default */
+            display: none; 
             position: fixed;
             bottom: 20px;
             left: 50%;
@@ -186,7 +198,6 @@
             margin-top: 15px;
         }
 
-        /* Tombol umum */
         button { cursor: pointer; }
         .btn-idle { background: var(--idle-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
         .btn-cbn { background: var(--cbn-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
@@ -194,6 +205,17 @@
         .btn-temu { background: var(--temu-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
         .btn-indofood { background: var(--indofood-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
         .btn-custom { background: #eee; border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+
+        /* Indikator Status Simpan */
+        #statusIndicator {
+            margin-left: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-clean { background: #e0fdf4; color: #166534; display: none; }
+        .status-dirty { background: #fef2f2; color: #991b1b; display: inline-block; border: 1px solid #f87171; }
 
     </style>
 </head>
@@ -208,23 +230,27 @@
         <div class="legend-item"><div class="color-box" style="background:var(--temu-color)"></div> TEMU</div>
         <div class="legend-item"><div class="color-box" style="background:var(--indofood-color)"></div> Indofood</div>
         
-        <div style="border-left: 2px solid #ccc; padding-left: 15px; margin-left: 10px; display:flex; gap:10px;">
-            <button onclick="manualSave()" style="background:#4ade80; color:black; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
-                💾 Save (Firestore Auto-Save)
+        <div style="border-left: 2px solid #ccc; padding-left: 15px; margin-left: 10px; display:flex; gap:10px; align-items:center;">
+            <!-- TOMBOL SAVE DIMODIFIKASI -->
+            <button onclick="manualSave()" id="btnSave" style="background:#4ade80; color:black; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold; box-shadow: 0 2px 2px rgba(0,0,0,0.2);">
+                💾 Save Changes to Firestore
             </button>
-            <button onclick="resetData()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
-                Reset All Data
+            <span id="statusIndicator" class="status-clean">Unsaved Changes!</span>
+
+            <!-- Reset Button -->
+            <button onclick="resetData()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold; margin-left: 10px;">
+                Reset DB
             </button>
         </div>
-        <div>Total Seats: <span id="totalSeats">0</span></div>
     </div>
     
-    <p style="margin-top:-10px; font-size: 0.9em; color: #666;">
-        Tip: Click on seats to select them (you can select multiple). Click the “Edit Selected” button below to change the labels.
+    <p style="margin-top:-10px; font-size: 0.9em; color: #666; text-align:center;">
+        Changes are kept locally until you click "Save Changes". <br>
+        Seats with a red dot have unsaved changes.
     </p>
 
     <div class="map-container" id="map">
-        <!-- Structure Elements -->
+        <!-- Structure Elements (Sama seperti sebelumnya) -->
         <div class="structure" style="top: 38%; left: 28%; width: 80px; height: 220px;">
             <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
                 <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
@@ -272,42 +298,43 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (place this at the end of <body> for faster page load) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
     <script>
         // --- Firebase Configuration ---
-        // !!! PENTING: GANTI DENGAN KONFIGURASI PROYEK FIREBASE ANDA SENDIRI !!!
-        // Anda bisa mendapatkan ini dari Firebase Console -> Project settings -> Your apps -> Web app
+        // !!! PENTING: ISI API KEY DI BAWAH INI !!!
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY_HERE", // <-- GANTI INI
-            authDomain: "seatmap-e7fa6.firebaseapp.com", // <-- SESUAIKAN JIKA BERBEDA
-            projectId: "seatmap-e7fa6", // Ini sudah sesuai dengan yang Anda berikan
-            storageBucket: "seatmap-e7fa6.appspot.com", // <-- GANTI INI
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE", // <-- GANTI INI
-            appId: "YOUR_APP_ID_HERE" // <-- GANTI INI
+            apiKey: "YOUR_API_KEY_HERE", 
+            authDomain: "seatmap-e7fa6.firebaseapp.com", 
+            projectId: "seatmap-e7fa6", 
+            storageBucket: "seatmap-e7fa6.appspot.com", 
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE", 
+            appId: "YOUR_APP_ID_HERE" 
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-
-        // Get a reference to the Firestore service
+        // Init Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
-        // Define your collection name for seats
-        const SEATS_COLLECTION_NAME = 'seatmap_9th_floor'; // Nama koleksi yang disarankan
+        const SEATS_COLLECTION_NAME = 'seatmap_9th_floor'; 
         const seatsCollection = db.collection(SEATS_COLLECTION_NAME);
 
-        // --- Existing JavaScript Logic (Modified for Firestore) ---
+        // --- Logic Data ---
         const map = document.getElementById('map');
         const selectionBar = document.getElementById('selectionBar');
         const selectionCountSpan = document.getElementById('selectionCount');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const btnSave = document.getElementById('btnSave');
         
         let selectedSeatIds = new Set();
-        let savedSeats = {}; // Ini sekarang akan menyimpan data yang diambil dari Firestore
+        let savedSeats = {}; // Data dari Server (Firestore)
+        let pendingChanges = {}; // Data Lokal yang belum di-save
         let seatCounter = 0;
 
-        // Konfigurasi Cluster (Sama persis seperti yang Anda berikan)
+        // Konfigurasi Cluster (Sama)
         const seatGroups = [
             { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
             { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
@@ -344,11 +371,10 @@
             { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
         ];
 
-        // Function untuk me-render peta berdasarkan data `savedSeats` saat ini
-        function renderMapFromSavedData() {
+        // --- RENDER MAP ---
+        function renderMap() {
             seatCounter = 0;
             
-            // Hapus grup kursi lama (jangan hapus elemen .structure)
             const oldGroups = document.querySelectorAll('.seat-group');
             oldGroups.forEach(el => el.remove());
 
@@ -363,8 +389,19 @@
                     seatCounter++;
                     const seatId = `S-${groupIndex}-${i}`;
                     
-                    // Ambil label dari savedSeats (yang sekarang berasal dari Firestore) atau gunakan default
-                    let currentLabel = savedSeats[seatId] || group.label;
+                    // --- LOGIKA PRIORITAS TAMPILAN ---
+                    // 1. Cek apakah ada perubahan lokal (pending)?
+                    // 2. Cek apakah ada data di server (savedSeats)?
+                    // 3. Default label
+                    let currentLabel = group.label;
+                    let isUnsaved = false;
+
+                    if (pendingChanges.hasOwnProperty(seatId)) {
+                        currentLabel = pendingChanges[seatId];
+                        isUnsaved = true;
+                    } else if (savedSeats.hasOwnProperty(seatId)) {
+                        currentLabel = savedSeats[seatId];
+                    }
 
                     const seat = document.createElement('div');
                     seat.className = 'seat';
@@ -372,13 +409,16 @@
                     seat.dataset.label = currentLabel;
                     seat.innerText = currentLabel;
                     seat.title = `ID: ${seatId}`;
+
+                    // Tambahkan kelas visual jika belum disave
+                    if (isUnsaved) {
+                        seat.classList.add('unsaved');
+                    }
                     
-                    // Pertahankan status seleksi setelah re-render
                     if (selectedSeatIds.has(seatId)) {
                         seat.classList.add('selected');
                     }
                     
-                    // Penanganan Event Klik
                     seat.onclick = function(e) {
                         e.stopPropagation();
                         toggleSelection(this);
@@ -389,13 +429,21 @@
                 map.appendChild(groupDiv);
             });
 
-            document.getElementById('totalSeats').innerText = seatCounter;
+            // Update UI indikator save
+            const pendingCount = Object.keys(pendingChanges).length;
+            if (pendingCount > 0) {
+                statusIndicator.className = "status-dirty";
+                statusIndicator.innerText = `${pendingCount} Unsaved Changes!`;
+                btnSave.innerText = "💾 Save Changes (" + pendingCount + ")";
+            } else {
+                statusIndicator.className = "status-clean";
+                btnSave.innerText = "💾 Save Changes to Firestore";
+            }
         }
 
-        // --- LOGIKA SELEKSI ---
+        // --- INTERAKSI (Select, Modal) ---
         function toggleSelection(seatElement) {
             const id = seatElement.dataset.id;
-
             if (selectedSeatIds.has(id)) {
                 selectedSeatIds.delete(id);
                 seatElement.classList.remove('selected');
@@ -403,7 +451,6 @@
                 selectedSeatIds.add(id);
                 seatElement.classList.add('selected');
             }
-
             updateSelectionUI();
         }
 
@@ -423,7 +470,6 @@
             }
         }
 
-        // --- LOGIKA MODAL & EDIT ---
         const modal = document.getElementById('editModal');
         const overlay = document.getElementById('modalOverlay');
         const labelInput = document.getElementById('customLabel');
@@ -434,13 +480,14 @@
                 alert("Please select seats first!");
                 return;
             }
-            
             labelInput.value = "";
             modalCount.innerText = selectedSeatIds.size;
-
+            
+            // Pre-fill input jika 1 item (prioritas: pending -> saved -> default)
             if (selectedSeatIds.size === 1) {
                 const firstId = Array.from(selectedSeatIds)[0];
-                labelInput.value = savedSeats[firstId] || ''; // Isi dengan label saat ini
+                const seatEl = document.querySelector(`.seat[data-id="${firstId}"]`);
+                labelInput.value = seatEl.innerText;
             }
 
             modal.style.display = 'block';
@@ -452,8 +499,8 @@
             overlay.style.display = 'none';
         }
 
-        // Fungsi untuk menerapkan pembaruan ke Firestore
-        async function applyUpdate(type) {
+        // --- UPDATE LOKAL (Offline sementara) ---
+        function applyUpdate(type) {
             let newLabel = type;
             if (type === 'Custom') {
                 newLabel = labelInput.value.trim();
@@ -463,66 +510,99 @@
                 }
             }
 
-            const batch = db.batch(); // Gunakan batch writes untuk efisiensi
+            // HANYA UPDATE VARIABEL LOKAL (pendingChanges)
             selectedSeatIds.forEach(id => {
-                const seatRef = seatsCollection.doc(id);
-                batch.set(seatRef, { label: newLabel }, { merge: true }); // Merge untuk hanya memperbarui 'label'
+                pendingChanges[id] = newLabel;
             });
 
-            try {
-                await batch.commit();
-                alert("✅ Labels updated successfully to Firestore!");
-            } catch (error) {
-                console.error("Error updating labels: ", error);
-                alert("Error updating labels. Check the console for details.");
-            }
-
+            // Render ulang untuk menampilkan perubahan (dan tanda merah)
+            renderMap();
+            
             clearSelection();
             closeModal();
         }
         
-        // --- KONTROL GLOBAL ---
+        // --- MANUAL SAVE KE FIRESTORE ---
+        async function manualSave() {
+            const keysToSave = Object.keys(pendingChanges);
 
-        // Fungsi untuk me-reset semua data di Firestore
+            if (keysToSave.length === 0) {
+                alert("No changes to save.");
+                return;
+            }
+
+            btnSave.disabled = true;
+            btnSave.innerText = "Saving...";
+
+            // Firestore Batch (Max 500 writes per batch)
+            const batch = db.batch();
+            
+            keysToSave.forEach(id => {
+                const seatRef = seatsCollection.doc(id);
+                // Kita gunakan merge: true agar field lain tidak tertimpa (jika ada)
+                batch.set(seatRef, { label: pendingChanges[id] }, { merge: true });
+            });
+
+            try {
+                await batch.commit();
+                
+                // Jika sukses, kosongkan pendingChanges karena data sudah di server
+                // Nanti onSnapshot akan men-trigger renderMap ulang dengan data dari server
+                pendingChanges = {}; 
+                alert("✅ Successfully saved to Firestore!");
+            } catch (error) {
+                console.error("Error saving batch: ", error);
+                alert("Error saving data: " + error.message);
+            } finally {
+                btnSave.disabled = false;
+                // Render map akan dipanggil otomatis oleh listener onSnapshot,
+                // tapi kita panggil manual juga untuk update UI tombol segera.
+                renderMap();
+            }
+        }
+
+        // --- RESET DATA (HAPUS DB) ---
         async function resetData() {
-            if (confirm("Are you sure you want to reset ALL seat data in Firestore? This action cannot be undone.")) {
+            if (confirm("WARNING: This will DELETE ALL DATA in Firestore and clear local changes. Are you sure?")) {
                 try {
+                    // 1. Hapus di Server
                     const snapshot = await seatsCollection.get();
                     const batch = db.batch();
                     snapshot.forEach(doc => {
                         batch.delete(doc.ref);
                     });
                     await batch.commit();
-                    savedSeats = {}; // Hapus cache lokal
-                    selectedSeatIds.clear(); // Hapus seleksi
-                    updateSelectionUI();
-                    alert("All seat data has been reset in Firestore!");
+
+                    // 2. Hapus Lokal
+                    savedSeats = {};
+                    pendingChanges = {};
+                    selectedSeatIds.clear();
+                    
+                    renderMap();
+                    alert("All data reset.");
                 } catch (error) {
-                    console.error("Error resetting data: ", error);
-                    alert("Error resetting data. Check the console for details.");
+                    console.error("Error resetting: ", error);
+                    alert("Error resetting data.");
                 }
             }
         }
 
-        // Tombol Save manual tidak lagi diperlukan karena Firestore menyediakan persistensi real-time.
-        function manualSave() {
-            alert("Data is automatically saved to Firebase Firestore upon update (Edit Labels). No manual save needed here!");
-        }
-
-        // Tutup modal jika overlay diklik
         overlay.onclick = closeModal;
 
-        // --- Listener real-time untuk Firestore ---
+        // --- LISTENER REAL-TIME (Untuk Load Awal & Update Orang Lain) ---
+        // Logic: Listener ini mengupdate 'savedSeats'.
+        // Render Map menggabungkan 'savedSeats' + 'pendingChanges'.
         seatsCollection.onSnapshot(snapshot => {
-            savedSeats = {}; // Hapus data sebelumnya
+            let tempSeats = {};
             snapshot.forEach(doc => {
-                savedSeats[doc.id] = doc.data().label;
+                tempSeats[doc.id] = doc.data().label;
             });
-            renderMapFromSavedData(); // Render ulang peta dengan data terbaru
+            savedSeats = tempSeats;
+            renderMap(); // Redraw peta setiap ada data baru dari server
         }, error => {
-            console.error("Error getting real-time updates from Firestore: ", error);
-            alert("Error fetching real-time updates. Please check your internet connection and console.");
+            console.error("Firestore listener error:", error);
         });
+
     </script>
 </body>
 </html>
