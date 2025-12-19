@@ -331,85 +331,43 @@
         let pendingChanges = {}; // Data Lokal (belum save)
         let seatCounter = 0;
 
-        // --- KONFIGURASI PETA SESUAI GAMBAR (Target: 325 Seats) ---
-        // Koordinat x (left%) dan y (top%) diestimasi agar mirip gambar.
+        // Konfigurasi Cluster (Sama)
         const seatGroups = [
-            // --- TOP LEFT CLUSTER (Column 1) ---
-            // Baris 1: 2x5 (kurang 1 di pojok kiri atas = 9 seat) -> Kita buat 1x4 dan 1x5 stacked
-            { x: 14, y: 10, rows: 1, cols: 4, label: "Idle" }, // Top part
-            { x: 12, y: 12.5, rows: 1, cols: 5, label: "Idle" }, // Bottom part (Total 9)
-            // Baris 2
-            { x: 12, y: 17, rows: 2, cols: 4, label: "Idle" },
-            // Baris 3
-            { x: 12, y: 25, rows: 2, cols: 4, label: "Idle" },
-            
-            // --- TOP LEFT CLUSTER (Column 2) ---
-            { x: 26, y: 9, rows: 2, cols: 4, label: "Idle" },
-            { x: 26, y: 17, rows: 2, cols: 4, label: "Idle" },
-            { x: 26, y: 25, rows: 2, cols: 4, label: "Idle" },
-            
-            // --- TOP LEFT (Islands) ---
-            { x: 10, y: 33, rows: 2, cols: 1, label: "Idle" }, // Single block left?
-            // Ada blok horizontal di kiri tengah
-            { x: 10, y: 35, rows: 1, cols: 1, label: "Idle" }, // Adjustment to fit visual
-
-            // --- VERTICAL STRIP (Center Left) ---
-            { x: 44, y: 11, rows: 8, cols: 1, label: "Idle" }, // (8 seats)
-            { x: 44, y: 19, rows: 8, cols: 1, label: "Idle" }, // Split to match visual 
-
-            // --- TOP RIGHT CLUSTER ---
-            // Column 1
-            { x: 55, y: 9, rows: 2, cols: 4, label: "Idle" },
-            { x: 55, y: 17, rows: 2, cols: 4, label: "Idle" },
-            { x: 55, y: 25, rows: 2, cols: 4, label: "Idle" },
-            // Column 2
-            { x: 68, y: 9, rows: 2, cols: 4, label: "Idle" },
-            { x: 68, y: 17, rows: 2, cols: 4, label: "Idle" },
-            { x: 68, y: 25, rows: 2, cols: 4, label: "Idle" },
-            
-            // --- TOP FAR RIGHT EXTENSION ---
-            { x: 80, y: 33, rows: 2, cols: 5, label: "Idle" }, // Yang menjorok keluar (10)
-            { x: 82, y: 36, rows: 2, cols: 1, label: "Idle" }, // Tambahan kecil
-
-            // --- LEFT SIDE "TETRIS" SHAPES ---
-            // Shape 1 (L-shape atas) - 7 seats
-            { x: 10, y: 46, rows: 1, cols: 1, label: "Idle" },
-            { x: 12, y: 46, rows: 2, cols: 3, label: "Idle" },
-            // Shape 2 (Kotak bawahnya) - 6 seats
-            { x: 12, y: 55, rows: 2, cols: 3, label: "Idle" },
-
-            // --- RIGHT SIDE VERTICAL STRIPS ---
-            // Strip Dalam (Dekat Server Room) - 2x8 = 16
-            { x: 79, y: 42, rows: 8, cols: 2, label: "Idle" },
-            // Strip Luar (Paling Kanan) - 2x9 + 1 = 19
-            { x: 85, y: 42, rows: 1, cols: 2, label: "Idle" }, // Top bit
-            { x: 85, y: 45, rows: 9, cols: 2, label: "Idle" }, // Main strip
-
-            // --- BOTTOM LEFT CLUSTERS ---
-            { x: 8, y: 68, rows: 2, cols: 6, label: "Idle" }, // (12 seats)
-            { x: 8, y: 77, rows: 2, cols: 4, label: "Idle" }, // (8 seats)
-            { x: 8, y: 86, rows: 1, cols: 3, label: "Idle" }, // (3 seats)
-
-            // --- BOTTOM CENTER/RIGHT CLUSTERS ---
-            { x: 23, y: 75, rows: 2, cols: 2, label: "Idle" }, // (4 seats)
-            { x: 31, y: 75, rows: 2, cols: 4, label: "Idle" }, // (8 seats)
-            
-            { x: 48, y: 75, rows: 2, cols: 4, label: "Idle" }, // (8 seats)
-            
-            { x: 63, y: 68, rows: 2, cols: 4, label: "Idle" }, // (8 seats)
-            { x: 63, y: 75, rows: 2, cols: 4, label: "Idle" }, // (8 seats)
-            
-            // --- BOTTOM LONG STRIPS (Penyumbang jumlah terbanyak) ---
-            // Kita atur panjangnya agar TOTAL = 325.
-            // Estimasi sebelumnya ~309. Kurang 16.
-            // Kita buat 2 strip panjang di bawah masing-masing 1x16 (32 total).
-            
-            { x: 16, y: 92, rows: 1, cols: 16, label: "Idle" }, // (16 seats)
-            { x: 49, y: 92, rows: 1, cols: 16, label: "Idle" }, // (16 seats)
-            
-            // Tambahan kecil untuk adjustment jika masih kurang/lebih
-            // Mari kita hitung di renderMap dan sesuaikan jika perlu.
+            { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
+            { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 15, rows: 2, cols: 4, label: "Idle" },
+            { x: 10, y: 23, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 23, rows: 2, cols: 4, label: "Idle" },
+            { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
+            { x: 24, y: 31, rows: 2, cols: 4, label: "Idle" },
+            { x: 46, y: 8, rows: 8, cols: 1, label: "Idle" },
+            { x: 55, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 55, y: 16, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
+            { x: 55, y: 24, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
+            { x: 74, y: 31, rows: 1, cols: 10, label: "Idle" },
+            { x: 82, y: 40, rows: 10, cols: 2, label: "Idle" },
+            { x: 6, y: 45, rows: 2, cols: 4, label: "Idle" },
+            { x: 8, y: 53, rows: 2, cols: 4, label: "Idle" },
+            { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
+            { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
+            { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
+            { x: 18, y: 72, rows: 2, cols: 2, label: "Idle" },
+            { x: 26, y: 72, rows: 2, cols: 6, label: "Idle" },
+            { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
+            { x: 26, y: 80, rows: 2, cols: 6, label: "Idle" },
+            { x: 13, y: 89, rows: 1, cols: 12, label: "Idle" }, 
+            { x: 48, y: 72, rows: 2, cols: 4, label: "Idle" },
+            { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
+            { x: 48, y: 80, rows: 2, cols: 5, label: "Idle" },
+            { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
+            { x: 49, y: 89, rows: 1, cols: 12, label: "Idle" },
+            { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
         ];
+
 
         // --- RENDER MAP & LOGIC ---
         function renderMap() {
