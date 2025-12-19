@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>9th FL MTen - Floor Plan Map</title>
+    <title>9th FL MTen - Manual Save Edition</title>
     <style>
         :root {
-            --idle-color: #4ade80; /* Hijau seperti di gambar */
+            --idle-color: #4ade80; /* Hijau */
             --cbn-color: #60a5fa;  /* Biru */
             --crm-color: #c084fc;  /* Ungu */
             --temu-color: #fb923c; /* Orange */
@@ -57,22 +57,11 @@
             height: 1080px;
             background-color: #fff;
             border: 3px solid #000;
-            /* Clip path dihapus agar kotak penuh seperti gambar */
-            border-radius: 4px; 
+            clip-path: polygon(5% 0%, 85% 0%, 100% 40%, 70% 100%, 5% 90%); 
+            border-radius: 20px; 
             overflow: hidden; 
             transform-origin: top center;
-            transform: scale(0.85); /* Zoom out sedikit agar muat */
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-
-        /* Garis Hitam Tebal di Atas (Sesuai Gambar) */
-        .top-line {
-            position: absolute;
-            top: 30px;
-            left: 50px;
-            right: 50px;
-            height: 5px;
-            background-color: black;
+            transform: scale(0.9); 
         }
 
         /* Group Kursi */
@@ -97,7 +86,7 @@
             cursor: pointer;
             user-select: none;
             background-color: var(--idle-color);
-            transition: transform 0.1s, background-color 0.2s;
+            transition: transform 0.1s, background-color 0.2s, border-color 0.1s;
             text-align: center;
             line-height: 1;
         }
@@ -107,13 +96,16 @@
             z-index: 10;
         }
 
+        /* CLASS KHUSUS JIKA DIPILIH (MULTI SELECT) */
         .seat.selected {
             border: 3px solid var(--selected-border);
             box-shadow: 0 0 5px rgba(0,0,0,0.5);
-            transform: scale(1.15);
+            transform: scale(1.1);
             z-index: 20;
+            filter: brightness(1.05);
         }
 
+        /* Indikator Visual untuk Data Belum Disimpan */
         .seat.unsaved::after {
             content: "•";
             color: red;
@@ -124,29 +116,27 @@
             line-height: 1;
         }
 
-        /* Warna Label */
+        /* Warna berdasarkan Label */
         .seat[data-label="Idle"] { background-color: var(--idle-color); }
         .seat[data-label*="CBN"] { background-color: var(--cbn-color); }
         .seat[data-label*="CRM"] { background-color: var(--crm-color); }
         .seat[data-label*="TEMU"] { background-color: var(--temu-color); }
         .seat[data-label*="Indofood"] { background-color: var(--indofood-color); }
+        .seat[data-label=""] { background-color: #eee; }
 
-        /* Struktur Bangunan (Lift, Toilet, dll) */
         .structure {
             position: absolute;
             border: 2px solid #000;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            background-color: #fff; /* Putih sesuai gambar */
+            background-color: #f3f4f6;
             text-align: center;
-            font-size: 14px;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+            font-size: 12px;
         }
 
-        /* Floating Bar */
+        /* --- FLOATING ACTION BAR --- */
         #selectionBar {
             display: none; 
             position: fixed;
@@ -163,17 +153,22 @@
             gap: 20px;
         }
         
+        #selectionBar span { font-weight: bold; }
+
         .btn-action {
             padding: 8px 16px;
             border-radius: 20px;
             border: none;
             font-weight: bold;
             cursor: pointer;
+            transition: 0.2s;
         }
         .btn-edit { background: #4ade80; color: #000; }
+        .btn-edit:hover { background: #22c55e; }
         .btn-clear { background: #ef4444; color: white; }
+        .btn-clear:hover { background: #dc2626; }
 
-        /* Modal */
+        /* Modal Edit */
         #editModal {
             display: none;
             position: fixed;
@@ -202,10 +197,16 @@
             gap: 10px;
             margin-top: 15px;
         }
-        
+
         button { cursor: pointer; }
-        
-        /* Status Indicator */
+        .btn-idle { background: var(--idle-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-cbn { background: var(--cbn-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-crm { background: var(--crm-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-temu { background: var(--temu-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-indofood { background: var(--indofood-color); border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+        .btn-custom { background: #eee; border: 1px solid #ccc; padding: 8px; border-radius:4px; }
+
+        /* Indikator Status Simpan */
         #statusIndicator {
             margin-left: 10px;
             font-weight: bold;
@@ -230,67 +231,67 @@
         <div class="legend-item"><div class="color-box" style="background:var(--indofood-color)"></div> Indofood</div>
         
         <div style="border-left: 2px solid #ccc; padding-left: 15px; margin-left: 10px; display:flex; gap:10px; align-items:center;">
+            <!-- TOMBOL SAVE DIMODIFIKASI -->
             <button onclick="manualSave()" id="btnSave" style="background:#4ade80; color:black; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold; box-shadow: 0 2px 2px rgba(0,0,0,0.2);">
                 💾 Save Changes to Firestore
             </button>
             <span id="statusIndicator" class="status-clean">Unsaved Changes!</span>
+
+            <!-- Reset Button -->
             <button onclick="resetData()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold; margin-left: 10px;">
                 Reset DB
             </button>
         </div>
-        <div style="margin-left: 15px; font-weight: bold;">Total Seats: <span id="totalSeats">0</span></div>
     </div>
+    
+    <p style="margin-top:-10px; font-size: 0.9em; color: #666; text-align:center;">
+        Changes are kept locally until you click "Save Changes". <br>
+        Seats with a red dot have unsaved changes.
+    </p>
 
     <div class="map-container" id="map">
-        <!-- Garis Hitam Atas -->
-        <div class="top-line"></div>
-
-        <!-- ================= STRUKTUR BANGUNAN (LIFT, TOILET, DLL) ================= -->
-        
-        <!-- Lift Bank Kiri (3 Kotak) -->
-        <div class="structure" style="top: 40%; left: 30%; width: 100px; height: 60px;">Lift</div>
-        <div class="structure" style="top: 48%; left: 30%; width: 100px; height: 60px;">Lift</div>
-        <div class="structure" style="top: 56%; left: 30%; width: 100px; height: 60px;">Lift</div>
-
-        <!-- Lift Bank Tengah (3 Kotak) -->
-        <div class="structure" style="top: 40%; left: 47%; width: 100px; height: 60px;">Lift</div>
-        <div class="structure" style="top: 48%; left: 47%; width: 100px; height: 60px;">Lift</div>
-        <div class="structure" style="top: 56%; left: 47%; width: 100px; height: 60px;">Lift</div>
-
-        <!-- Lift Barang -->
-        <div class="structure" style="top: 48%; left: 57%; width: 100px; height: 80px;">Lift Barang</div>
-
-        <!-- Toilet VIP -->
-        <div class="structure" style="top: 56%; left: 55%; width: 60px; height: 80px;">Toilet VIP</div>
-
-        <!-- Area Kanan -->
-        <div class="structure" style="top: 43%; left: 65%; width: 60px; height: 30px; font-size:10px;">Tangga Darurat</div>
-        <div class="structure" style="top: 43%; left: 72%; width: 50px; height: 30px; font-size:10px;">Gudang IT</div>
-        <div class="structure" style="top: 50%; left: 72%; width: 50px; height: 30px; font-size:10px;">Server Room</div>
-        <div class="structure" style="top: 61%; left: 73%; width: 40px; height: 30px; font-size:10px;">Panel Room</div>
-        <div class="structure" style="top: 40%; left: 92%; width: 60px; height: 80px;">Coaching Room</div>
-
+        <!-- Structure Elements (Sama seperti sebelumnya) -->
+        <div class="structure" style="top: 38%; left: 28%; width: 80px; height: 220px;">
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:5px;">Lift</div>
+            </div>
+        </div>
+        <div class="structure" style="top: 38%; left: 48%; width: 80px; height: 220px;">
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+                <div style="border:1px solid #000; padding:10px; margin:2px;">Lift</div>
+            </div>
+        </div>
+        <div class="structure" style="top: 45%; left: 58%; width: 80px; height: 60px;">Lift Barang</div>
+        <div class="structure" style="top: 40%; left: 70%; width: 60px; height: 180px;">Server Room</div>
+        <div class="structure" style="top: 40%; left: 90%; width: 40px; height: 80px;">Coaching</div>
     </div>
 
-    <!-- UI Elements (Floating Bar, Modal) -->
+    <!-- Floating Selection Bar -->
     <div id="selectionBar">
         <span id="selectionCount">0 Seat(s) Selected</span>
         <button class="btn-action btn-edit" onclick="openModal()">✏️ Edit Selected</button>
         <button class="btn-action btn-clear" onclick="clearSelection()">✖ Cancel</button>
     </div>
 
+    <!-- Modal Edit -->
     <div id="modalOverlay"></div>
     <div id="editModal">
         <h3 style="margin-top:0;">Edit Label</h3>
         <p style="font-size: 0.9em; color:#555;">Mengubah <span id="modalCount">0</span> kursi terpilih.</p>
+        
         <input type="text" id="customLabel" placeholder="Ketik label custom..." style="width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box;">
+        
         <div class="modal-buttons">
-            <button class="btn-idle" onclick="applyUpdate('Idle')" style="background:var(--idle-color)">Set Idle</button>
-            <button class="btn-cbn" onclick="applyUpdate('CBN')" style="background:var(--cbn-color)">Set CBN</button>
-            <button class="btn-crm" onclick="applyUpdate('CRM')" style="background:var(--crm-color)">Set CRM</button>
-            <button class="btn-temu" onclick="applyUpdate('TEMU')" style="background:var(--temu-color)">Set TEMU</button>
-            <button class="btn-indofood" onclick="applyUpdate('Indofood')" style="background:var(--indofood-color)">Set Indofood</button>
-            <button onclick="applyUpdate('Custom')">Text Input</button>
+            <button class="btn-idle" onclick="applyUpdate('Idle')">Set Idle</button>
+            <button class="btn-cbn" onclick="applyUpdate('CBN')">Set CBN</button>
+            <button class="btn-crm" onclick="applyUpdate('CRM')">Set CRM</button>
+            <button class="btn-temu" onclick="applyUpdate('TEMU')">Set TEMU</button>
+            <button class="btn-indofood" onclick="applyUpdate('Indofood')">Set Indofood</button>
+            <button class="btn-custom" onclick="applyUpdate('Custom')">Use Text Input</button>
         </div>
         <div style="margin-top: 15px; text-align: right;">
             <button onclick="closeModal()" style="background:transparent; border:none; text-decoration:underline;">Batal</button>
@@ -302,7 +303,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
     <script>
-        // --- KONFIGURASI FIREBASE ---
+        // --- Firebase Configuration ---
+        // !!! PENTING: ISI API KEY DI BAWAH INI !!!
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY_HERE", 
             authDomain: "seatmap-e7fa6.firebaseapp.com", 
@@ -312,6 +314,7 @@
             appId: "YOUR_APP_ID_HERE" 
         };
 
+        // Init Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -319,7 +322,7 @@
         const SEATS_COLLECTION_NAME = 'seatmap_9th_floor'; 
         const seatsCollection = db.collection(SEATS_COLLECTION_NAME);
 
-        // --- Variabel Global ---
+        // --- Logic Data ---
         const map = document.getElementById('map');
         const selectionBar = document.getElementById('selectionBar');
         const selectionCountSpan = document.getElementById('selectionCount');
@@ -327,8 +330,8 @@
         const btnSave = document.getElementById('btnSave');
         
         let selectedSeatIds = new Set();
-        let savedSeats = {}; // Data dari DB
-        let pendingChanges = {}; // Data Lokal (belum save)
+        let savedSeats = {}; // Data dari Server (Firestore)
+        let pendingChanges = {}; // Data Lokal yang belum di-save
         let seatCounter = 0;
 
         // Konfigurasi Cluster (Sama)
@@ -368,12 +371,10 @@
             { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
         ];
 
-
-        // --- RENDER MAP & LOGIC ---
+        // --- RENDER MAP ---
         function renderMap() {
             seatCounter = 0;
             
-            // Hapus grup kursi lama (jangan hapus struktur)
             const oldGroups = document.querySelectorAll('.seat-group');
             oldGroups.forEach(el => el.remove());
 
@@ -388,7 +389,10 @@
                     seatCounter++;
                     const seatId = `S-${groupIndex}-${i}`;
                     
-                    // Priority: Pending Local -> DB -> Default
+                    // --- LOGIKA PRIORITAS TAMPILAN ---
+                    // 1. Cek apakah ada perubahan lokal (pending)?
+                    // 2. Cek apakah ada data di server (savedSeats)?
+                    // 3. Default label
                     let currentLabel = group.label;
                     let isUnsaved = false;
 
@@ -406,8 +410,14 @@
                     seat.innerText = currentLabel;
                     seat.title = `ID: ${seatId}`;
 
-                    if (isUnsaved) seat.classList.add('unsaved');
-                    if (selectedSeatIds.has(seatId)) seat.classList.add('selected');
+                    // Tambahkan kelas visual jika belum disave
+                    if (isUnsaved) {
+                        seat.classList.add('unsaved');
+                    }
+                    
+                    if (selectedSeatIds.has(seatId)) {
+                        seat.classList.add('selected');
+                    }
                     
                     seat.onclick = function(e) {
                         e.stopPropagation();
@@ -419,10 +429,7 @@
                 map.appendChild(groupDiv);
             });
 
-            // Update Total Seat Count
-            document.getElementById('totalSeats').innerText = seatCounter;
-
-            // Update Save Button State
+            // Update UI indikator save
             const pendingCount = Object.keys(pendingChanges).length;
             if (pendingCount > 0) {
                 statusIndicator.className = "status-dirty";
@@ -434,7 +441,7 @@
             }
         }
 
-        // --- SELECTION LOGIC ---
+        // --- INTERAKSI (Select, Modal) ---
         function toggleSelection(seatElement) {
             const id = seatElement.dataset.id;
             if (selectedSeatIds.has(id)) {
@@ -463,7 +470,6 @@
             }
         }
 
-        // --- MODAL & APPLY UPDATES ---
         const modal = document.getElementById('editModal');
         const overlay = document.getElementById('modalOverlay');
         const labelInput = document.getElementById('customLabel');
@@ -471,17 +477,19 @@
 
         function openModal() {
             if (selectedSeatIds.size === 0) {
-                alert("Pilih kursi terlebih dahulu!");
+                alert("Please select seats first!");
                 return;
             }
             labelInput.value = "";
             modalCount.innerText = selectedSeatIds.size;
             
+            // Pre-fill input jika 1 item (prioritas: pending -> saved -> default)
             if (selectedSeatIds.size === 1) {
                 const firstId = Array.from(selectedSeatIds)[0];
                 const seatEl = document.querySelector(`.seat[data-id="${firstId}"]`);
                 labelInput.value = seatEl.innerText;
             }
+
             modal.style.display = 'block';
             overlay.style.display = 'block';
         }
@@ -491,79 +499,108 @@
             overlay.style.display = 'none';
         }
 
+        // --- UPDATE LOKAL (Offline sementara) ---
         function applyUpdate(type) {
             let newLabel = type;
             if (type === 'Custom') {
                 newLabel = labelInput.value.trim();
-                if (!newLabel) { alert("Masukkan label!"); return; }
+                if (!newLabel) {
+                    alert("Please enter a custom label!");
+                    return;
+                }
             }
 
+            // HANYA UPDATE VARIABEL LOKAL (pendingChanges)
             selectedSeatIds.forEach(id => {
                 pendingChanges[id] = newLabel;
             });
 
+            // Render ulang untuk menampilkan perubahan (dan tanda merah)
             renderMap();
+            
             clearSelection();
             closeModal();
         }
         
-        // --- SAVE TO FIREBASE ---
+        // --- MANUAL SAVE KE FIRESTORE ---
         async function manualSave() {
             const keysToSave = Object.keys(pendingChanges);
-            if (keysToSave.length === 0) { alert("Tidak ada perubahan."); return; }
+
+            if (keysToSave.length === 0) {
+                alert("No changes to save.");
+                return;
+            }
 
             btnSave.disabled = true;
             btnSave.innerText = "Saving...";
 
+            // Firestore Batch (Max 500 writes per batch)
             const batch = db.batch();
             
             keysToSave.forEach(id => {
                 const seatRef = seatsCollection.doc(id);
+                // Kita gunakan merge: true agar field lain tidak tertimpa (jika ada)
                 batch.set(seatRef, { label: pendingChanges[id] }, { merge: true });
             });
 
             try {
                 await batch.commit();
+                
+                // Jika sukses, kosongkan pendingChanges karena data sudah di server
+                // Nanti onSnapshot akan men-trigger renderMap ulang dengan data dari server
                 pendingChanges = {}; 
-                alert("✅ Berhasil disimpan ke Firestore!");
+                alert("✅ Successfully saved to Firestore!");
             } catch (error) {
-                console.error("Error:", error);
-                alert("Gagal menyimpan: " + error.message);
+                console.error("Error saving batch: ", error);
+                alert("Error saving data: " + error.message);
             } finally {
                 btnSave.disabled = false;
+                // Render map akan dipanggil otomatis oleh listener onSnapshot,
+                // tapi kita panggil manual juga untuk update UI tombol segera.
                 renderMap();
             }
         }
 
-        // --- RESET DATA ---
+        // --- RESET DATA (HAPUS DB) ---
         async function resetData() {
-            if (confirm("PERINGATAN: Ini akan MENGHAPUS SEMUA DATA di database. Yakin?")) {
+            if (confirm("WARNING: This will DELETE ALL DATA in Firestore and clear local changes. Are you sure?")) {
                 try {
+                    // 1. Hapus di Server
                     const snapshot = await seatsCollection.get();
                     const batch = db.batch();
-                    snapshot.forEach(doc => batch.delete(doc.ref));
+                    snapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
                     await batch.commit();
+
+                    // 2. Hapus Lokal
                     savedSeats = {};
                     pendingChanges = {};
                     selectedSeatIds.clear();
+                    
                     renderMap();
-                    alert("Data berhasil di-reset.");
+                    alert("All data reset.");
                 } catch (error) {
-                    console.error("Error:", error);
+                    console.error("Error resetting: ", error);
+                    alert("Error resetting data.");
                 }
             }
         }
 
         overlay.onclick = closeModal;
 
-        // --- REALTIME LISTENER ---
+        // --- LISTENER REAL-TIME (Untuk Load Awal & Update Orang Lain) ---
+        // Logic: Listener ini mengupdate 'savedSeats'.
+        // Render Map menggabungkan 'savedSeats' + 'pendingChanges'.
         seatsCollection.onSnapshot(snapshot => {
             let tempSeats = {};
             snapshot.forEach(doc => {
                 tempSeats[doc.id] = doc.data().label;
             });
             savedSeats = tempSeats;
-            renderMap(); 
+            renderMap(); // Redraw peta setiap ada data baru dari server
+        }, error => {
+            console.error("Firestore listener error:", error);
         });
 
     </script>
