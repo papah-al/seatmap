@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>9th FL MTen</title>
+    <title>9th FL MTen - Firebase Edition</title>
     <style>
         :root {
             --idle-color: #4ade80; /* Hijau */
@@ -210,10 +210,10 @@
         
         <div style="border-left: 2px solid #ccc; padding-left: 15px; margin-left: 10px; display:flex; gap:10px;">
             <button onclick="manualSave()" style="background:#4ade80; color:black; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
-                💾 Save
+                💾 Save (Firestore Auto-Save)
             </button>
             <button onclick="resetData()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius: 4px; font-weight:bold;">
-                Reset Data
+                Reset All Data
             </button>
         </div>
         <div>Total Seats: <span id="totalSeats">0</span></div>
@@ -272,226 +272,257 @@
         </div>
     </div>
 
-<script>
-    const map = document.getElementById('map');
-    const selectionBar = document.getElementById('selectionBar');
-    const selectionCountSpan = document.getElementById('selectionCount');
+    <!-- Firebase SDK (place this at the end of <body> for faster page load) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     
-    // Set untuk menyimpan ID kursi yang sedang dipilih
-    let selectedSeatIds = new Set();
-    
-    // Load data tersimpan
-let savedSeats = JSON.parse(localStorage.getItem('denah_kantor_data')) || {};
+    <script>
+        // --- Firebase Configuration ---
+        // !!! PENTING: GANTI DENGAN KONFIGURASI PROYEK FIREBASE ANDA SENDIRI !!!
+        // Anda bisa mendapatkan ini dari Firebase Console -> Project settings -> Your apps -> Web app
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE", // <-- GANTI INI
+            authDomain: "seatmap-e7fa6.firebaseapp.com", // <-- SESUAIKAN JIKA BERBEDA
+            projectId: "seatmap-e7fa6", // Ini sudah sesuai dengan yang Anda berikan
+            storageBucket: "seatmap-e7fa6.appspot.com", // <-- GANTI INI
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE", // <-- GANTI INI
+            appId: "YOUR_APP_ID_HERE" // <-- GANTI INI
+        };
 
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
 
-    // Konfigurasi Cluster (Sama)
-    const seatGroups = [
-        { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
-        { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
-        { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
-        { x: 24, y: 15, rows: 2, cols: 4, label: "Idle" },
-        { x: 10, y: 23, rows: 2, cols: 5, label: "Idle" },
-        { x: 24, y: 23, rows: 2, cols: 4, label: "Idle" },
-        { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
-        { x: 24, y: 31, rows: 2, cols: 4, label: "Idle" },
-        { x: 46, y: 8, rows: 8, cols: 1, label: "Idle" },
-        { x: 55, y: 8, rows: 2, cols: 5, label: "Idle" },
-        { x: 69, y: 8, rows: 2, cols: 5, label: "Idle" },
-        { x: 55, y: 16, rows: 2, cols: 5, label: "Idle" },
-        { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
-        { x: 55, y: 24, rows: 2, cols: 5, label: "Idle" },
-        { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
-        { x: 74, y: 31, rows: 1, cols: 10, label: "Idle" },
-        { x: 82, y: 40, rows: 10, cols: 2, label: "Idle" },
-        { x: 6, y: 45, rows: 2, cols: 4, label: "Idle" },
-        { x: 8, y: 53, rows: 2, cols: 4, label: "Idle" },
-        { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
-        { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
-        { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
-        { x: 18, y: 72, rows: 2, cols: 2, label: "Idle" },
-        { x: 26, y: 72, rows: 2, cols: 6, label: "Idle" },
-        { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
-        { x: 26, y: 80, rows: 2, cols: 6, label: "Idle" },
-        { x: 13, y: 89, rows: 1, cols: 12, label: "Idle" }, 
-        { x: 48, y: 72, rows: 2, cols: 4, label: "Idle" },
-        { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
-        { x: 48, y: 80, rows: 2, cols: 5, label: "Idle" },
-        { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
-        { x: 49, y: 89, rows: 1, cols: 12, label: "Idle" },
-        { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
-    ];
+        // Get a reference to the Firestore service
+        const db = firebase.firestore();
+        // Define your collection name for seats
+        const SEATS_COLLECTION_NAME = 'seatmap_9th_floor'; // Nama koleksi yang disarankan
+        const seatsCollection = db.collection(SEATS_COLLECTION_NAME);
 
-    let seatCounter = 0;
-
-    function renderMap() {
-        seatCounter = 0;
+        // --- Existing JavaScript Logic (Modified for Firestore) ---
+        const map = document.getElementById('map');
+        const selectionBar = document.getElementById('selectionBar');
+        const selectionCountSpan = document.getElementById('selectionCount');
         
-        // Hapus grup kursi lama (jangan hapus .structure)
-        const oldGroups = document.querySelectorAll('.seat-group');
-        oldGroups.forEach(el => el.remove());
+        let selectedSeatIds = new Set();
+        let savedSeats = {}; // Ini sekarang akan menyimpan data yang diambil dari Firestore
+        let seatCounter = 0;
 
-        seatGroups.forEach((group, groupIndex) => {
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'seat-group';
-            groupDiv.style.left = group.x + '%';
-            groupDiv.style.top = group.y + '%';
-            groupDiv.style.gridTemplateColumns = `repeat(${group.cols}, 1fr)`;
+        // Konfigurasi Cluster (Sama persis seperti yang Anda berikan)
+        const seatGroups = [
+            { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
+            { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 15, rows: 2, cols: 4, label: "Idle" },
+            { x: 10, y: 23, rows: 2, cols: 5, label: "Idle" },
+            { x: 24, y: 23, rows: 2, cols: 4, label: "Idle" },
+            { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
+            { x: 24, y: 31, rows: 2, cols: 4, label: "Idle" },
+            { x: 46, y: 8, rows: 8, cols: 1, label: "Idle" },
+            { x: 55, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 8, rows: 2, cols: 5, label: "Idle" },
+            { x: 55, y: 16, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
+            { x: 55, y: 24, rows: 2, cols: 5, label: "Idle" },
+            { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
+            { x: 74, y: 31, rows: 1, cols: 10, label: "Idle" },
+            { x: 82, y: 40, rows: 10, cols: 2, label: "Idle" },
+            { x: 6, y: 45, rows: 2, cols: 4, label: "Idle" },
+            { x: 8, y: 53, rows: 2, cols: 4, label: "Idle" },
+            { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
+            { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
+            { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
+            { x: 18, y: 72, rows: 2, cols: 2, label: "Idle" },
+            { x: 26, y: 72, rows: 2, cols: 6, label: "Idle" },
+            { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
+            { x: 26, y: 80, rows: 2, cols: 6, label: "Idle" },
+            { x: 13, y: 89, rows: 1, cols: 12, label: "Idle" }, 
+            { x: 48, y: 72, rows: 2, cols: 4, label: "Idle" },
+            { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
+            { x: 48, y: 80, rows: 2, cols: 5, label: "Idle" },
+            { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
+            { x: 49, y: 89, rows: 1, cols: 12, label: "Idle" },
+            { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
+        ];
 
-            for (let i = 0; i < group.rows * group.cols; i++) {
-                seatCounter++;
-                const seatId = `S-${groupIndex}-${i}`;
-                
-                // Ambil label dari savedSeats atau default
-                let currentLabel = savedSeats[seatId] || group.label;
+        // Function untuk me-render peta berdasarkan data `savedSeats` saat ini
+        function renderMapFromSavedData() {
+            seatCounter = 0;
+            
+            // Hapus grup kursi lama (jangan hapus elemen .structure)
+            const oldGroups = document.querySelectorAll('.seat-group');
+            oldGroups.forEach(el => el.remove());
 
-                const seat = document.createElement('div');
-                seat.className = 'seat';
-                seat.dataset.id = seatId;
-                seat.dataset.label = currentLabel;
-                seat.innerText = currentLabel;
-                seat.title = `ID: ${seatId}`;
-                
-                // Cek apakah kursi ini sedang dipilih (berguna saat render ulang setelah save)
-                if (selectedSeatIds.has(seatId)) {
-                    seat.classList.add('selected');
+            seatGroups.forEach((group, groupIndex) => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'seat-group';
+                groupDiv.style.left = group.x + '%';
+                groupDiv.style.top = group.y + '%';
+                groupDiv.style.gridTemplateColumns = `repeat(${group.cols}, 1fr)`;
+
+                for (let i = 0; i < group.rows * group.cols; i++) {
+                    seatCounter++;
+                    const seatId = `S-${groupIndex}-${i}`;
+                    
+                    // Ambil label dari savedSeats (yang sekarang berasal dari Firestore) atau gunakan default
+                    let currentLabel = savedSeats[seatId] || group.label;
+
+                    const seat = document.createElement('div');
+                    seat.className = 'seat';
+                    seat.dataset.id = seatId;
+                    seat.dataset.label = currentLabel;
+                    seat.innerText = currentLabel;
+                    seat.title = `ID: ${seatId}`;
+                    
+                    // Pertahankan status seleksi setelah re-render
+                    if (selectedSeatIds.has(seatId)) {
+                        seat.classList.add('selected');
+                    }
+                    
+                    // Penanganan Event Klik
+                    seat.onclick = function(e) {
+                        e.stopPropagation();
+                        toggleSelection(this);
+                    };
+
+                    groupDiv.appendChild(seat);
                 }
-                
-                // Event Click Handling
-                seat.onclick = function(e) {
-                    // Mencegah double firing jika perlu
-                    e.stopPropagation();
-                    toggleSelection(this);
-                };
+                map.appendChild(groupDiv);
+            });
 
-                groupDiv.appendChild(seat);
+            document.getElementById('totalSeats').innerText = seatCounter;
+        }
+
+        // --- LOGIKA SELEKSI ---
+        function toggleSelection(seatElement) {
+            const id = seatElement.dataset.id;
+
+            if (selectedSeatIds.has(id)) {
+                selectedSeatIds.delete(id);
+                seatElement.classList.remove('selected');
+            } else {
+                selectedSeatIds.add(id);
+                seatElement.classList.add('selected');
             }
-            map.appendChild(groupDiv);
-        });
 
-        document.getElementById('totalSeats').innerText = seatCounter;
-    }
-
-    // --- SELECTION LOGIC ---
-    function toggleSelection(seatElement) {
-        const id = seatElement.dataset.id;
-
-        if (selectedSeatIds.has(id)) {
-            // Unselect
-            selectedSeatIds.delete(id);
-            seatElement.classList.remove('selected');
-        } else {
-            // Select
-            selectedSeatIds.add(id);
-            seatElement.classList.add('selected');
-        }
-
-        updateSelectionUI();
-    }
-
-    function clearSelection() {
-        selectedSeatIds.clear();
-        document.querySelectorAll('.seat.selected').forEach(el => el.classList.remove('selected'));
-        updateSelectionUI();
-    }
-
-    function updateSelectionUI() {
-        const count = selectedSeatIds.size;
-        if (count > 0) {
-            selectionBar.style.display = 'flex';
-            selectionCountSpan.innerText = `${count} Selected`;
-        } else {
-            selectionBar.style.display = 'none';
-        }
-    }
-
-    // --- MODAL & EDIT LOGIC ---
-    const modal = document.getElementById('editModal');
-    const overlay = document.getElementById('modalOverlay');
-    const labelInput = document.getElementById('customLabel');
-    const modalCount = document.getElementById('modalCount');
-
-    function openModal() {
-        if (selectedSeatIds.size === 0) {
-            alert("Select first!");
-            return;
-        }
-        
-        // Reset input text
-        labelInput.value = "";
-        
-        // Tampilkan jumlah yang akan diedit
-        modalCount.innerText = selectedSeatIds.size;
-
-        // Jika hanya 1 yang dipilih, isi input dengan label saat ini agar mudah diedit
-        if (selectedSeatIds.size === 1) {
-            const firstId = Array.from(selectedSeatIds)[0];
-            const seatEl = document.querySelector(`.seat[data-id="${firstId}"]`);
-            if (seatEl) labelInput.value = seatEl.dataset.label;
-        }
-
-        modal.style.display = 'block';
-        overlay.style.display = 'block';
-    }
-
-    function closeModal() {
-        modal.style.display = 'none';
-        overlay.style.display = 'none';
-    }
-
-    function applyUpdate(type) {
-        let newLabel = type;
-        if (type === 'Custom') {
-            newLabel = labelInput.value.trim();
-            if (!newLabel) {
-                alert("Input text label!");
-                return;
-            }
-        }
-
-        // Terapkan ke semua ID yang dipilih
-        selectedSeatIds.forEach(id => {
-            savedSeats[id] = newLabel;
-        });
-
-        // Simpan ke LocalStorage otomatis (opsional, tapi bagus untuk UX)
-        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
-
-        // Render ulang (cara paling aman untuk update tampilan banyak elemen)
-        renderMap();
-        
-        // Clear selection setelah edit selesai
-        clearSelection();
-        closeModal();
-    }
-    
-    // --- GLOBAL CONTROLS ---
-
-    function resetData() {
-        if(confirm("Are you sure want to reset all?")) {
-            localStorage.removeItem('denah_kantor_data');
-            savedSeats = {};
-            selectedSeatIds.clear();
-            renderMap();
             updateSelectionUI();
         }
-    }
 
-    function manualSave() {
-        localStorage.setItem('denah_kantor_data', JSON.stringify(savedSeats));
-        alert("✅ Data has been permanently saved!");
-    }
+        function clearSelection() {
+            selectedSeatIds.clear();
+            document.querySelectorAll('.seat.selected').forEach(el => el.classList.remove('selected'));
+            updateSelectionUI();
+        }
 
-    // Tutup modal jika klik overlay
-    overlay.onclick = closeModal;
+        function updateSelectionUI() {
+            const count = selectedSeatIds.size;
+            if (count > 0) {
+                selectionBar.style.display = 'flex';
+                selectionCountSpan.innerText = `${count} Selected`;
+            } else {
+                selectionBar.style.display = 'none';
+            }
+        }
 
-    // Init App
-    renderMap();
+        // --- LOGIKA MODAL & EDIT ---
+        const modal = document.getElementById('editModal');
+        const overlay = document.getElementById('modalOverlay');
+        const labelInput = document.getElementById('customLabel');
+        const modalCount = document.getElementById('modalCount');
 
-</script>
+        function openModal() {
+            if (selectedSeatIds.size === 0) {
+                alert("Please select seats first!");
+                return;
+            }
+            
+            labelInput.value = "";
+            modalCount.innerText = selectedSeatIds.size;
 
-    
+            if (selectedSeatIds.size === 1) {
+                const firstId = Array.from(selectedSeatIds)[0];
+                labelInput.value = savedSeats[firstId] || ''; // Isi dengan label saat ini
+            }
 
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+        }
 
-    
+        function closeModal() {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+
+        // Fungsi untuk menerapkan pembaruan ke Firestore
+        async function applyUpdate(type) {
+            let newLabel = type;
+            if (type === 'Custom') {
+                newLabel = labelInput.value.trim();
+                if (!newLabel) {
+                    alert("Please enter a custom label!");
+                    return;
+                }
+            }
+
+            const batch = db.batch(); // Gunakan batch writes untuk efisiensi
+            selectedSeatIds.forEach(id => {
+                const seatRef = seatsCollection.doc(id);
+                batch.set(seatRef, { label: newLabel }, { merge: true }); // Merge untuk hanya memperbarui 'label'
+            });
+
+            try {
+                await batch.commit();
+                alert("✅ Labels updated successfully to Firestore!");
+            } catch (error) {
+                console.error("Error updating labels: ", error);
+                alert("Error updating labels. Check the console for details.");
+            }
+
+            clearSelection();
+            closeModal();
+        }
+        
+        // --- KONTROL GLOBAL ---
+
+        // Fungsi untuk me-reset semua data di Firestore
+        async function resetData() {
+            if (confirm("Are you sure you want to reset ALL seat data in Firestore? This action cannot be undone.")) {
+                try {
+                    const snapshot = await seatsCollection.get();
+                    const batch = db.batch();
+                    snapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    savedSeats = {}; // Hapus cache lokal
+                    selectedSeatIds.clear(); // Hapus seleksi
+                    updateSelectionUI();
+                    alert("All seat data has been reset in Firestore!");
+                } catch (error) {
+                    console.error("Error resetting data: ", error);
+                    alert("Error resetting data. Check the console for details.");
+                }
+            }
+        }
+
+        // Tombol Save manual tidak lagi diperlukan karena Firestore menyediakan persistensi real-time.
+        function manualSave() {
+            alert("Data is automatically saved to Firebase Firestore upon update (Edit Labels). No manual save needed here!");
+        }
+
+        // Tutup modal jika overlay diklik
+        overlay.onclick = closeModal;
+
+        // --- Listener real-time untuk Firestore ---
+        seatsCollection.onSnapshot(snapshot => {
+            savedSeats = {}; // Hapus data sebelumnya
+            snapshot.forEach(doc => {
+                savedSeats[doc.id] = doc.data().label;
+            });
+            renderMapFromSavedData(); // Render ulang peta dengan data terbaru
+        }, error => {
+            console.error("Error getting real-time updates from Firestore: ", error);
+            alert("Error fetching real-time updates. Please check your internet connection and console.");
+        });
+    </script>
 </body>
 </html>
