@@ -344,42 +344,95 @@
         let pendingChanges = {}; // Data Lokal yang belum di-save
         let seatCounter = 0;
 
-        // Konfigurasi Cluster (Sama)
-        const seatGroups = [
-            { x: 10, y: 8, rows: 2, cols: 5, label: "Idle" },
-            { x: 24, y: 8, rows: 2, cols: 4, label: "Idle" },
-            { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
-            { x: 24, y: 15, rows: 2, cols: 4, label: "Idle" },
-            { x: 10, y: 23, rows: 2, cols: 5, label: "Idle" },
-            { x: 24, y: 23, rows: 2, cols: 4, label: "Idle" },
-            { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
-            { x: 24, y: 31, rows: 2, cols: 4, label: "Idle" },
-            { x: 46, y: 8, rows: 8, cols: 1, label: "Idle" },
-            { x: 55, y: 8, rows: 2, cols: 5, label: "Idle" },
-            { x: 69, y: 8, rows: 2, cols: 5, label: "Idle" },
-            { x: 55, y: 16, rows: 2, cols: 5, label: "Idle" },
-            { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
-            { x: 55, y: 24, rows: 2, cols: 5, label: "Idle" },
-            { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
-            { x: 74, y: 31, rows: 1, cols: 10, label: "Idle" },
-            { x: 82, y: 40, rows: 10, cols: 2, label: "Idle" },
-            { x: 6, y: 45, rows: 2, cols: 4, label: "Idle" },
-            { x: 8, y: 53, rows: 2, cols: 4, label: "Idle" },
-            { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
-            { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
-            { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
-            { x: 18, y: 72, rows: 2, cols: 2, label: "Idle" },
-            { x: 26, y: 72, rows: 2, cols: 6, label: "Idle" },
-            { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
-            { x: 26, y: 80, rows: 2, cols: 6, label: "Idle" },
-            { x: 13, y: 89, rows: 1, cols: 12, label: "Idle" }, 
-            { x: 48, y: 72, rows: 2, cols: 4, label: "Idle" },
-            { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
-            { x: 48, y: 80, rows: 2, cols: 5, label: "Idle" },
-            { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
-            { x: 49, y: 89, rows: 1, cols: 12, label: "Idle" },
-            { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
-        ];
+    // Konfigurasi Cluster (Sama)
+    const seatGroups = [
+        { x: 10, y: 9, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 12.1, y: 8, rows: 2, cols: 4, label: "Idle" },
+        { x: 23.9, y: 8, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 32.4, y: 9, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 10, y: 15, rows: 2, cols: 5, label: "Idle" },
+        { x: 23.9, y: 15, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 32.4, y: 16, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 8, y: 23, rows: 2, cols: 6, label: "Idle" },
+        { x: 23.9, y: 23, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 32.4, y: 24, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 5.9, y: 32, rows: 1, cols: 1, label: "Idle" }, 
+
+        { x: 8, y: 31, rows: 2, cols: 6, label: "Idle" }, 
+
+        { x: 23.9, y: 31, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 46, y: 8, rows: 2, cols: 1, label: "Idle" },
+        { x: 46, y: 14, rows: 5, cols: 1, label: "Idle" },
+
+        { x: 54.9, y: 9, rows: 1, cols: 1, label: "Idle" },
+        { x: 57, y: 8, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 69, y: 8, rows: 2, cols: 4, label: "Idle" },
+        { x: 77.5, y: 9, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 54.9, y: 17, rows: 1, cols: 1, label: "Idle" },
+        { x: 57, y: 16, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 69, y: 16, rows: 2, cols: 5, label: "Idle" },
+
+        { x: 54.9, y: 25, rows: 1, cols: 1, label: "Idle" },
+        { x: 57, y: 24, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 69, y: 24, rows: 2, cols: 6, label: "Idle" },
+        { x: 81.7, y: 25, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 74, y: 31, rows: 2, cols: 6, label: "Idle" },
+        { x: 86.7, y: 32, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 78, y: 41.9, rows: 1, cols: 1, label: "Idle" },
+        { x: 77, y: 44, rows: 6, cols: 2, label: "Idle" },
+
+        { x: 84.5, y: 40, rows: 6, cols: 2, label: "Idle" },
+        { x: 85.5, y: 53.1, rows: 1, cols: 1, label: "Idle" },
+
+
+        { x: 12.4, y: 40.7, rows: 4, cols: 1, label: "Idle" },
+        { x: 6.1, y: 46, rows: 1, cols: 1, label: "Idle" },
+        { x: 8.2, y: 45, rows: 2, cols: 2, label: "Idle" },
+
+        { x: 6.1, y: 54, rows: 1, cols: 1, label: "Idle" },
+        { x: 8.2, y: 53, rows: 2, cols: 3, label: "Idle" },
+
+        { x: 5, y: 65, rows: 2, cols: 6, label: "Idle" },
+        { x: 5, y: 74, rows: 2, cols: 4, label: "Idle" },
+        { x: 5, y: 82, rows: 1, cols: 3, label: "Idle" },
+        { x: 20, y: 72, rows: 2, cols: 2, label: "Idle" },
+
+        { x: 28, y: 72, rows: 2, cols: 5, label: "Idle" },
+        { x: 38.6, y: 73, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 16, y: 80, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 28, y: 80, rows: 2, cols: 5, label: "Idle" },
+        { x: 38.6, y: 81, rows: 1, cols: 1, label: "Idle" },
+
+        { x: 11, y: 88, rows: 1, cols: 14, label: "Idle" }, 
+
+        { x: 48, y: 73, rows: 1, cols: 1, label: "Idle" },
+        { x: 50.1, y: 72, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 62, y: 72, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 48, y: 81, rows: 1, cols: 1, label: "Idle" },
+        { x: 50.1, y: 80, rows: 2, cols: 4, label: "Idle" },
+
+        { x: 62, y: 80, rows: 2, cols: 4, label: "Idle" },
+        { x: 49, y: 88, rows: 1, cols: 12, label: "Idle" },
+        { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
+    ];
 
         // --- RENDER MAP ---
         function renderMap() {
