@@ -221,7 +221,13 @@
 </head>
 <body>
 
-    <h1>Mapping Seat 9th FL MTen</h1>
+    <h1>
+        Mapping Seat 9th FL MTen 
+        <!-- Penambahan Display Total Seat -->
+        <span style="font-size: 0.5em; font-weight: normal; color: #555; vertical-align: middle; margin-left: 10px;">
+            (Total: <span id="totalSeatDisplay">0</span> Seats)
+        </span>
+    </h1>
 
     <div class="controls">
         <div class="legend-item"><div class="color-box" style="background:var(--idle-color)"></div> Idle</div>
@@ -437,7 +443,7 @@
         { x: 67, y: 64, rows: 2, cols: 4, label: "Idle" }
     ];
 
-        // --- RENDER MAP ---
+// --- RENDER MAP (Updated dengan Total Seat) ---
         function renderMap() {
             seatCounter = 0;
             
@@ -455,10 +461,6 @@
                     seatCounter++;
                     const seatId = `S-${groupIndex}-${i}`;
                     
-                    // --- LOGIKA PRIORITAS TAMPILAN ---
-                    // 1. Cek apakah ada perubahan lokal (pending)?
-                    // 2. Cek apakah ada data di server (savedSeats)?
-                    // 3. Default label
                     let currentLabel = group.label;
                     let isUnsaved = false;
 
@@ -476,7 +478,6 @@
                     seat.innerText = currentLabel;
                     seat.title = `ID: ${seatId}`;
 
-                    // Tambahkan kelas visual jika belum disave
                     if (isUnsaved) {
                         seat.classList.add('unsaved');
                     }
@@ -494,6 +495,9 @@
                 }
                 map.appendChild(groupDiv);
             });
+
+            // --- PERUBAHAN DISINI: Update angka di header ---
+            document.getElementById('totalSeatDisplay').innerText = seatCounter;
 
             // Update UI indikator save
             const pendingCount = Object.keys(pendingChanges).length;
